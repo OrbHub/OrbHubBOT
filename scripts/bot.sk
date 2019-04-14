@@ -1,1 +1,130 @@
+# Orb Hub LTD Discord Bot
 
+# Made by techcode
+
+# CODE #
+
+Options:
+	bot: Orb Hub LTD
+	icon: https://imgur.com/9wiLZHF.png
+
+# Functions
+
+#SendEmbed
+function sendEmbed(e: embed builder, c: channel):
+	set {_m} to a message builder
+	set embed of {_m} to {_e}
+	send {_m} to {_c} with "{@bot}"
+
+# Events
+
+#LogIn
+on skript load:
+	login to "NTY2Njg0Mzg0NzQxMTYzMDE4.XLIkAw.325_zF6s61XKH6UeK8MMehs67O4" with name "{@bot}"
+
+# Commands
+
+#New
+discord command new:
+	prefixes: /
+	bots: {@bot}
+	trigger:
+		if {ticket::%event-member%} is true:
+			reply with ":x: You already have an active ticket, use that ticket."
+		else:
+			set {ticket::%event-member%} to true
+			add 1 to {tickets}
+			create text channel:
+				set the name of the channel to "ticket-%{tickets}%"
+				set topic of the channel to "%mention tag of event-member%'s ticket"
+				set the parent of the channel to category named "Tickets"
+			create the last made channel in event-guild and store it in {_c}
+			set {_m::*} to event-guild's discord members
+			loop {_m::*}:
+				if loop-value is event-member:
+					allow loop-value permissions message write and view channel and message read in {_c}
+				else:
+					if loop-value has role named "Support Team":
+						allow loop-value permissions message read and message write in {_c}
+					else:
+						deny loop-value permissions view channel and message write and message read in {_c}
+			reply with ":ok_hand: Created ticket. (##%{_c}%)"
+			set {ticketowner::%{_c}%} to event-member
+			create embed:
+				set the colour of embed to color from rgb 34, 80, 189
+				set icon of embed to "{@icon}"
+				set the title of embed to title with text "Support Ticket"
+				set the description of embed to "Hello, %mention tag of event-member%. Thanks for contacting the Orb Hub Support team. You can start describing your issue or your question(s) here, and a support member will be with you shortly."
+				set timestamp of embed to now
+				set footer of embed to "Orb Hub LTD"
+			sendEmbed(last made embed, {_c})
+
+#Close
+discord command close:
+	prefixes: /
+	bots: {@bot}
+	trigger:
+		if "%event-channel%" contains "ticket":
+			reply with ":ok_hand: Closing ticket..."
+			wait 3 seconds
+			delete event-channel
+			clear {ticket::%{ticketowner::%event-channel%}%}
+		else:
+			reply with ":x: That command can only be used in tickets!"
+
+#ResetUserTicket
+discord command forceclearticket [<user>]:
+	prefixes: /
+	bots: {@bot}
+	trigger:
+		if event-member has permission administrator:
+			if arg-1 is set:
+				reply with ":ok_hand: %mention tag of arg-1%'s ticket status was reset."
+				clear {ticket::%arg-1%}
+			else:
+				reply with ":thinking: Who's ticket are you resetting...?"
+		else:
+			reply with ":x: Command can only be used by administrators."
+
+#Status
+discord command status:
+	prefixes: /
+	bots: {@bot}
+	trigger:
+		send typing in event-channel with event-bot
+		set {_m::*} to event-guild's discord members
+		loop {_m::*}:
+			if loop-value has role named "Support Team":
+				add 1 to {_support::*}
+				if status of loop-value is online:
+					add loop-value to {_online::*}
+				if size of {_online::*} > 0:
+					set {supportstatus} to "Online"
+				else:
+					set {supportstatus} to "Away"
+		wait 1 tick
+		if {supportstatus} is "Online":
+			reply with ":white_check_mark: Support is online."
+		else if {supportstatus} is "Away":
+			reply with ":x: Sorry, it appears that support is away."
+		else:
+			reply with ":confused: An unexpected error occured."
+
+#Purge
+discord command purge [<integer>]:
+	prefixes: /
+	bots: {@bot}
+	trigger:
+		event-member has permission administrator:
+			arg-1 is set:
+				set {_num} to arg-1 
+				grab the last {_num} messages in event-channel
+				purge the grabbed messages with event-bot
+				set {_error} to last vixio error 
+				{_error} is set:
+					reply with "Unexpected error: `%{_error}%`"
+					stop
+			else:
+				reply with ":thinking: How many messages...?"
+		else:
+			reply with ":x: Command can only be used by administrators."
